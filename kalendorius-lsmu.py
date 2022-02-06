@@ -14,7 +14,6 @@ CAL_FNAME = "cal.ics"
 
 
 class Event:
-
     def __init__(self, description, summary, dtstart, dtend):
 
         self.description = description
@@ -32,7 +31,8 @@ class Event:
         if self.ciklas == ciklas:
             combo = {
                 "numeris": self.numeris,
-                "data": self.data,
+                "ds": self.ds,
+                "de": self.de,
                 "pavadinimas": self.pavadinimas,
                 "tipas": self.tipas,
                 "ciklas": self.ciklas,
@@ -71,27 +71,35 @@ class Event:
             self.pavadinimas = None
 
     def set_tipas(self):
-        dirty_tipas = (self.description.strip().split("\n")[0].replace(
-            "(Tiesioginė transliacija)", "").strip().split(" "))
+        dirty_tipas = (
+            self.description.strip()
+            .split("\n")[0]
+            .replace("(Tiesioginė transliacija)", "")
+            .strip()
+            .split(" ")
+        )
         # Remove random symbols and take only first word
         tipas = [i for i in dirty_tipas if len(i) != 1][0]
         self.tipas = tipas
 
     def set_ciklas(self):
         # Remove random symbols
-        ciklas = (self.summary
-                  .replace("(Tiesioginė transliacija)", "")
-                  .replace("🏠", " ")
-                  .replace("🔴", " ")
-                  .strip()
-                  )
+        ciklas = (
+            self.summary.replace("(Tiesioginė transliacija)", "")
+            .replace("🏠", " ")
+            .replace("🔴", " ")
+            .strip()
+        )
         self.ciklas = ciklas
 
     def set_data(self):
-        start = self.dtstart.dt.strftime("%Y.%m.%d %H:%M")
-        end = self.dtend.dt.strftime("%H:%M")
-        date = start + "-" + end
-        self.data = date
+        # start = self.dtstart.dt.strftime("%Y/%m/%d %H:%M")
+        # end = self.dtend.dt.strftime("%H:%M")
+        # date = start + "-" + end
+        # self.data = date
+
+        self.ds = int(self.dtstart.dt.strftime("%s")) * 1000
+        self.de = int(self.dtend.dt.strftime("%s")) * 1000
 
     def set_pavadinimas(self):
         if not self.has_valid_number:
@@ -107,8 +115,7 @@ class Event:
 def get_shit_list_from_file(flocation):
     jeez_lsmu_list = []
     with open(flocation, "r", encoding="UTF-8") as fin:
-        result = re.findall(
-            r"([0-9]\.[0-9]+)\.\s(.*\n){,7}Padalinys –(.*)", fin.read())
+        result = re.findall(r"([0-9]\.[0-9]+)\.\s(.*\n){,7}Padalinys –(.*)", fin.read())
         # result = re.findall(r"[0-9]\.[0-9]+\.\s", fin.read())
         for i in result:
             number = i[0].strip()
@@ -123,12 +130,12 @@ def get_shit_list_from_file(flocation):
 def cal_to_csv(fname, cal_list):
     with open(fname, "w", newline="", encoding="utf-8") as f:
         thewriter = csv.writer(f)
-        thewriter.writerow(
-            ["Numeris", "Data", "Pavadinimas", "Tipas", "Ciklas"])
+        thewriter.writerow(["Numeris", "ds", "de", "Pavadinimas", "Tipas", "Ciklas"])
         for row in cal_list:
             lsmu_list = [
                 row["numeris"],
-                row["data"],
+                row["ds"],
+                row["de"],
                 row["pavadinimas"],
                 row["tipas"],
                 row["ciklas"],
@@ -199,8 +206,11 @@ def lol(event_object_list):
     print("Total Events:", total_count)
     print("Events without 'paskaitos numeris':", bad_count)
     print("Events with 'paskaitos numeris':", good_count)
-    print("Tinginiai, kurie nesugeba įvesti paskaitos numerio:",
-          (bad_count/total_count)*100, "%")
+    print(
+        "Tinginiai, kurie nesugeba įvesti paskaitos numerio:",
+        (bad_count / total_count) * 100,
+        "%",
+    )
 
 
 def get_ciklai_list(event_object_list):
@@ -213,10 +223,9 @@ def get_ciklai_list(event_object_list):
 
 def main():
 
-    cal_url = input('Enter Calendar URL (Enter for default): ')
+    cal_url = input("Enter Calendar URL (Enter for default): ")
     if not cal_url:
         cal_url = "https://lsmusis.lsmuni.lt/Tvarkarasciai/ManoTvarkarastis/ICal?lang=Lt&id=LkRwDqvySWE%3D"
-
 
     # Get Calendar from File or from URL:
     cal = get_cal_from_url(cal_url)
@@ -237,13 +246,10 @@ def main():
 
     if not csv_fname:
         csv_fname = "tvarkarastis.csv"
-    
+
     # Write Calendar List to CSV file:
-    cal_list = get_cal_events_list(
-        event_object_list, options[menu_entry_index])
+    cal_list = get_cal_events_list(event_object_list, options[menu_entry_index])
     cal_to_csv(csv_fname, cal_list)
-
-
 
 
 if __name__ == "__main__":
